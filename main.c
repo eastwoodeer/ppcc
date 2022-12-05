@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -6,8 +7,8 @@
 #include <string.h>
 
 typedef enum {
-	TK_PUNCT,					/* punctuations */
-	TK_NUM,						/* numbers */
+	TK_PUNCT, /* punctuations */
+	TK_NUM, /* numbers */
 	TK_EOF,
 } TokenKind;
 
@@ -27,7 +28,7 @@ static void verror_at(char *loc, char *fmt, va_list ap)
 	int pos = loc - current_line;
 	fprintf(stderr, "%s\n", current_line);
 	fprintf(stderr, "%*s%s", pos, "", "^ ");
-	fprintf(stderr, fmt, ap);
+	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -60,7 +61,7 @@ static bool equal(Token *tk, char *s)
 	return (memcmp(tk->loc, s, tk->len) == 0 && s[tk->len] == '\0');
 }
 
-static Token* skip(Token *tk, char *s)
+static Token *skip(Token *tk, char *s)
 {
 	if (!equal(tk, s)) {
 		panic_tk(tk, "skip: expected '%s'", s);
@@ -78,7 +79,7 @@ static int get_num(Token *tk)
 	return tk->val;
 }
 
-static Token* new_token(char *start, char *end, TokenKind kind)
+static Token *new_token(char *start, char *end, TokenKind kind)
 {
 	Token *tk = calloc(1, sizeof(Token));
 	tk->kind = kind;
@@ -108,8 +109,8 @@ static Token *tokenize()
 			continue;
 		}
 
-		if (*p == '+' || *p == '-') {
-			cur = cur->next = new_token(p, p+1, TK_PUNCT);
+		if (ispunct(*p)) {
+			cur = cur->next = new_token(p, p + 1, TK_PUNCT);
 			p++;
 			continue;
 		}
@@ -122,41 +123,179 @@ static Token *tokenize()
 	return head.next;
 }
 
+/* Parser */
+typedef enum {
+	ND_ADD, /* + */
+	ND_SUB, /* - */
+	ND_MUL, /* * */
+	ND_DIV, /* / */
+	ND_NUM, /* Integer */
+} NodeKind;
+
+typedef struct Node Node;
+struct Node {
+	NodeKind kind;
+	Node *lhs;
+	Node *rhs;
+	int val;
+};
+
+static Node *new_node(NodeKind kind)
+{
+	Node *n = calloc(1, sizeof(Node));
+	n->kind = kind;
+
+	return n;
+}
+
+static Node *new_num(int val)
+{
+	Node *n = new_node(ND_NUM);
+	n->val = val;
+	return n;
+}
+
+static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs)
+{
+	Node *n = new_node(kind);
+	n->lhs = lhs;
+	n->rhs = rhs;
+
+	return n;
+}
+
+/* expr = mul ( "+" mul | "-" mul )* */
+/* mul = primary ( "*" primary | "/" primary )*  */
+/* primary = "(" expr ")" | num      */
+static Node *expr(Token *tk, Token **rest);
+static Node *mul(Token *tk, Token **rest);
+static Node *primary(Token *tk, Token **rest);
+
+static Node *expr(Token *tk, Token **rest)
+{
+	Node *n = mul(tk, &tk);
+	while (1) {
+		if (equal(tk, "+")) {
+			n = new_binary(ND_ADD, n, mul(tk->next, &tk));
+			continue;
+		}
+
+		if (equal(tk, "-")) {
+			n = new_binary(ND_SUB, n, mul(tk->next, &tk));
+			continue;
+		}
+
+		*rest = tk;
+		return n;
+	}
+}
+
+static Node *mul(Token *tk, Token **rest)
+{
+	Node *n = primary(tk, &tk);
+	while (1) {
+		if (equal(tk, "*")) {
+			n = new_binary(ND_MUL, n, mul(tk->next, &tk));
+			continue;
+		}
+
+		if (equal(tk, "/")) {
+			n = new_binary(ND_DIV, n, mul(tk->next, &tk));
+			continue;
+		}
+
+		*rest = tk;
+		return n;
+	}
+}
+
+static Node *primary(Token *tk, Token **rest)
+{
+	if (equal(tk, "(")) {
+		Node *n = expr(tk->next, &tk);
+		*rest = skip(tk, ")");
+		return n;
+	}
+
+	if (tk->kind = TK_NUM) {
+		Node *n = new_num(tk->val);
+		*rest = tk->next;
+		return n;
+	}
+
+	panic_tk(tk, "expecetd a expression");
+}
+
+/* Code generator */
+static int stack_depth = 0;
+
+static void push()
+{
+	printf("    addi 1, 1, -4\n");
+	printf("    stw  3, 0(1)\n");
+	stack_depth++;
+}
+
+static void pop(char *arg)
+{
+	printf("    lwz %s, 0(1)\n", arg);
+	printf("    addi 1, 1, 4\n");
+	stack_depth--;
+}
+
+static void gen_expr(Node *node)
+{
+	if (node->kind == ND_NUM) {
+		printf("    li 3, %d\n", node->val);
+		return;
+	}
+
+	gen_expr(node->rhs);
+	push();
+	gen_expr(node->lhs);
+	pop("4");
+
+	switch (node->kind) {
+	case ND_ADD:
+		printf("    add 3, 3, 4\n");
+		return;
+	case ND_SUB:
+		printf("    sub 3, 3, 4\n");
+		return;
+	case ND_MUL:
+		printf("    mullw 3, 3, 4\n");
+		return;
+	case ND_DIV:
+		printf("    divw 3, 3, 4\n");
+		return;
+	}
+
+	panic("invalid expression.");
+}
+
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
+	if (argc != 2) {
 		fprintf(stderr, "%s: invalid number of arguments.\n", argv[0]);
 		return 1;
 	}
 
 	current_line = argv[1];
 	Token *tk = tokenize();
+	Node *n = expr(tk, &tk);
+
+	if (tk->kind != TK_EOF) {
+		panic_tk(tk, "extra token.");
+	}
 
 	printf(".global main\n");
 	printf("main:\n");
-	printf("    li 3, %d\n", get_num(tk));
-	tk = tk->next;
 
-	while (tk->kind != TK_EOF) {
-		if (equal(tk, "+")) {
-			tk = skip(tk, "+");
-			printf("    addi 3, 3, %d\n", get_num(tk));
-			tk = tk->next;
-			continue;
-		}
+	gen_expr(n);
 
-		if (equal(tk, "-")) {
-			tk = skip(tk, "-");
-			printf("    subi 3, 3, %d\n", get_num(tk));
-			tk = tk->next;
-			continue;
-		}
-
-		panic("main: unexpected end");
-		return 1;
-	}
+	assert(stack_depth == 0);
 
 	printf("    blr\n");
 
-    return 0;
+	return 0;
 }

@@ -29,3 +29,7 @@ assert 0 0
 assert 99 99
 assert '9+12-8' 13
 assert ' 5  + 99-      8   ' 96
+assert '(3+5)-2' 6
+assert '4+2*3' 10
+assert '(3+5)/2' 4
+assert '5*(9-6)' 15
