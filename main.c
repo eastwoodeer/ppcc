@@ -20,6 +20,32 @@ struct Token {
 	int len;
 };
 
+static char *current_line;
+
+static void verror_at(char *loc, char *fmt, va_list ap)
+{
+	int pos = loc - current_line;
+	fprintf(stderr, "%s\n", current_line);
+	fprintf(stderr, "%*s%s", pos, "", "^ ");
+	fprintf(stderr, fmt, ap);
+	fprintf(stderr, "\n");
+	exit(1);
+}
+
+static void panic_at(char *loc, char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	verror_at(loc, fmt, ap);
+}
+
+static void panic_tk(Token *tk, char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	verror_at(tk->loc, fmt, ap);
+}
+
 static void panic(char *fmt, ...)
 {
 	va_list ap;
@@ -37,7 +63,7 @@ static bool equal(Token *tk, char *s)
 static Token* skip(Token *tk, char *s)
 {
 	if (!equal(tk, s)) {
-		panic("skip: expected '%s'", s);
+		panic_tk(tk, "skip: expected '%s'", s);
 	}
 
 	return tk->next;
@@ -46,7 +72,7 @@ static Token* skip(Token *tk, char *s)
 static int get_num(Token *tk)
 {
 	if (tk->kind != TK_NUM) {
-		panic("get_num: expected a number got %d", tk->kind);
+		panic_tk(tk, "get_num: expected a number");
 	}
 
 	return tk->val;
@@ -62,11 +88,11 @@ static Token* new_token(char *start, char *end, TokenKind kind)
 	return tk;
 }
 
-static Token *tokenize(char *s)
+static Token *tokenize()
 {
 	Token head = {};
 	Token *cur = &head;
-	char *p = s;
+	char *p = current_line;
 
 	while (*p) {
 		if (isspace(*p)) {
@@ -88,7 +114,7 @@ static Token *tokenize(char *s)
 			continue;
 		}
 
-		panic("tokenize: invalid token");
+		panic_at(p, "tokenize: invalid token");
 	}
 
 	cur = cur->next = new_token(p, p, TK_EOF);
@@ -103,7 +129,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	Token *tk = tokenize(argv[1]);
+	current_line = argv[1];
+	Token *tk = tokenize();
 
 	printf(".global main\n");
 	printf("main:\n");
