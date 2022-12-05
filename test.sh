@@ -5,6 +5,12 @@ assert() {
 	expected=$2
 
 	./ppcc "$input" > tmp.s
+	if [ "$?" == "1" ]; then
+		echo "ppcc failed: "
+		cat tmp.s
+		exit 1
+	fi
+
 	powerpc-linux-gnu-gcc -static -o tmp tmp.s
 	qemu-ppc ./tmp
 	actual="$?"
@@ -21,5 +27,5 @@ assert() {
 
 assert 0 0
 assert 99 99
-assert '3+12-8' 7
-assert '3+99-8' 94
+assert '9+12-8' 13
+assert ' 5  + 99-      8   ' 96
