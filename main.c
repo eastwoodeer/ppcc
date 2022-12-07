@@ -130,6 +130,7 @@ typedef enum {
 	ND_MUL, /* * */
 	ND_DIV, /* / */
 	ND_NUM, /* Integer */
+	ND_NEG,
 } NodeKind;
 
 typedef struct Node Node;
@@ -164,11 +165,21 @@ static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs)
 	return n;
 }
 
+static Node *new_unary(NodeKind kind, Node *lhs)
+{
+	Node *n = new_node(kind);
+	n->lhs = lhs;
+
+	return n;
+}
+
 /* expr = mul ( "+" mul | "-" mul )* */
-/* mul = primary ( "*" primary | "/" primary )*  */
+/* unary = ( "+" | "-" ) unary | primary */
+/* mul = unary ( "*" unary | "/" unary )*  */
 /* primary = "(" expr ")" | num      */
 static Node *expr(Token *tk, Token **rest);
 static Node *mul(Token *tk, Token **rest);
+static Node *unary(Token *tk, Token **rest);
 static Node *primary(Token *tk, Token **rest);
 
 static Node *expr(Token *tk, Token **rest)
@@ -192,21 +203,34 @@ static Node *expr(Token *tk, Token **rest)
 
 static Node *mul(Token *tk, Token **rest)
 {
-	Node *n = primary(tk, &tk);
+	Node *n = unary(tk, &tk);
 	while (1) {
 		if (equal(tk, "*")) {
-			n = new_binary(ND_MUL, n, mul(tk->next, &tk));
+			n = new_binary(ND_MUL, n, unary(tk->next, &tk));
 			continue;
 		}
 
 		if (equal(tk, "/")) {
-			n = new_binary(ND_DIV, n, mul(tk->next, &tk));
+			n = new_binary(ND_DIV, n, unary(tk->next, &tk));
 			continue;
 		}
 
 		*rest = tk;
 		return n;
 	}
+}
+
+static Node *unary(Token *tk, Token **rest)
+{
+	if (equal(tk, "+")) {
+		return unary(tk->next, rest);
+	}
+
+	if (equal(tk, "-")) {
+		return new_unary(ND_NEG, unary(tk->next, rest));
+	}
+
+	return primary(tk, rest);
 }
 
 static Node *primary(Token *tk, Token **rest)
@@ -243,19 +267,24 @@ static void pop(char *arg)
 	stack_depth--;
 }
 
-static void gen_expr(Node *node)
+static void gen_expr(Node *n)
 {
-	if (node->kind == ND_NUM) {
-		printf("    li 3, %d\n", node->val);
+	switch (n->kind) {
+	case ND_NUM:
+		printf("    li 3, %d\n", n->val);
+		return;
+	case ND_NEG:
+		gen_expr(n->lhs);
+		printf("    neg 3, 3\n");
 		return;
 	}
 
-	gen_expr(node->rhs);
+	gen_expr(n->rhs);
 	push();
-	gen_expr(node->lhs);
+	gen_expr(n->lhs);
 	pop("4");
 
-	switch (node->kind) {
+	switch (n->kind) {
 	case ND_ADD:
 		printf("    add 3, 3, 4\n");
 		return;

@@ -11,7 +11,7 @@ assert() {
 		exit 1
 	fi
 
-	powerpc-linux-gnu-gcc -static -o tmp tmp.s
+	clang --target=powerpc-unknown-gnu -fuse-ld=lld -static tmp.s -o tmp
 	qemu-ppc ./tmp
 	actual="$?"
 
@@ -33,3 +33,6 @@ assert '(3+5)-2' 6
 assert '4+2*3' 10
 assert '(3+5)/2' 4
 assert '5*(9-6)' 15
+assert '- - + 5' 5
+assert '-5 * -5' 25
+
