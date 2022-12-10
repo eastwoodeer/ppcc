@@ -1,4 +1,5 @@
 CFLAGS=-std=c11 -g -fno-common
+CC=clang
 
 ppcc: main.c
 	$(CC) -o ppcc main.c $(LDFLAGS)

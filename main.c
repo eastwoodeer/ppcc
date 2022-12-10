@@ -89,6 +89,21 @@ static Token *new_token(char *start, char *end, TokenKind kind)
 	return tk;
 }
 
+static bool startswith(char *s, char *p)
+{
+	return strncmp(s, p, strlen(p)) == 0;
+}
+
+static int read_punct(char *s)
+{
+	if (startswith(s, "==") || startswith(s, "!=") || startswith(s, ">=") ||
+	    startswith(s, "<=")) {
+		return 2;
+	}
+
+	return ispunct(*s) ? 1 : 0;
+}
+
 static Token *tokenize()
 {
 	Token head = {};
@@ -109,9 +124,11 @@ static Token *tokenize()
 			continue;
 		}
 
-		if (ispunct(*p)) {
-			cur = cur->next = new_token(p, p + 1, TK_PUNCT);
-			p++;
+		/* Punctuators */
+		int len = read_punct(p);
+		if (len) {
+			cur = cur->next = new_token(p, p + len, TK_PUNCT);
+			p += cur->len;
 			continue;
 		}
 
@@ -129,8 +146,14 @@ typedef enum {
 	ND_SUB, /* - */
 	ND_MUL, /* * */
 	ND_DIV, /* / */
+	ND_NEG, /* unary */
+	ND_EQ, /* == */
+	ND_NE, /* != */
+	ND_LT, /* < */
+	ND_LE, /* <= */
+	ND_GT, /* > */
+	ND_GE, /* >= */
 	ND_NUM, /* Integer */
-	ND_NEG,
 } NodeKind;
 
 typedef struct Node Node;
@@ -173,16 +196,77 @@ static Node *new_unary(NodeKind kind, Node *lhs)
 	return n;
 }
 
-/* expr = mul ( "+" mul | "-" mul )* */
-/* unary = ( "+" | "-" ) unary | primary */
-/* mul = unary ( "*" unary | "/" unary )*  */
-/* primary = "(" expr ")" | num      */
+/**
+ * expr = equality
+ * equality = relational ( "==" relational | "!=" relational )*
+ * relational = add ( "<" add | "<=" add | ">" add | ">=" add )*
+ * add = mul ( "+" mul | "-" mul )* 
+ * unary = ( "+" | "-" ) unary | primary 
+ * mul = unary ( "*" unary | "/" unary )*  
+ * primary = "(" expr ")" | num
+ **/
 static Node *expr(Token *tk, Token **rest);
+static Node *equality(Token *tk, Token **rest);
+static Node *relational(Token *tk, Token **rest);
+static Node *add(Token *tk, Token **rest);
 static Node *mul(Token *tk, Token **rest);
 static Node *unary(Token *tk, Token **rest);
 static Node *primary(Token *tk, Token **rest);
 
 static Node *expr(Token *tk, Token **rest)
+{
+	return equality(tk, rest);
+}
+
+static Node *equality(Token *tk, Token **rest)
+{
+	Node *n = relational(tk, &tk);
+	while (1) {
+		if (equal(tk, "==")) {
+			n = new_binary(ND_EQ, n, relational(tk->next, &tk));
+			continue;
+		}
+
+		if (equal(tk, "!=")) {
+			n = new_binary(ND_NE, n, relational(tk->next, &tk));
+			continue;
+		}
+
+		*rest = tk;
+		return n;
+	}
+}
+
+static Node *relational(Token *tk, Token **rest)
+{
+	Node *n = add(tk, &tk);
+	while (1) {
+		if (equal(tk, "<")) {
+			n = new_binary(ND_LT, n, add(tk->next, &tk));
+			continue;
+		}
+
+		if (equal(tk, "<=")) {
+			n = new_binary(ND_LE, n, add(tk->next, &tk));
+			continue;
+		}
+
+		if (equal(tk, ">")) {
+			n = new_binary(ND_GT, n, add(tk->next, &tk));
+			continue;
+		}
+
+		if (equal(tk, ">=")) {
+			n = new_binary(ND_GE, n, add(tk->next, &tk));
+			continue;
+		}
+
+		*rest = tk;
+		return n;
+	}
+}
+
+static Node *add(Token *tk, Token **rest)
 {
 	Node *n = mul(tk, &tk);
 	while (1) {
@@ -241,13 +325,16 @@ static Node *primary(Token *tk, Token **rest)
 		return n;
 	}
 
-	if (tk->kind = TK_NUM) {
+	if (tk->kind == TK_NUM) {
 		Node *n = new_num(tk->val);
 		*rest = tk->next;
 		return n;
 	}
 
 	panic_tk(tk, "expecetd a expression");
+
+	/* never reaches here. */
+	return NULL;
 }
 
 /* Code generator */
@@ -296,6 +383,42 @@ static void gen_expr(Node *n)
 		return;
 	case ND_DIV:
 		printf("    divw 3, 3, 4\n");
+		return;
+	case ND_NE:
+		printf("    xor 4, 3, 4\n");
+		printf("    addic 3, 4, -1\n");
+		printf("    subfe 3, 3, 4\n");
+		return;
+	case ND_EQ:
+		printf("    xor 3, 3, 4\n");
+		printf("    cntlzw 3, 3\n");
+		printf("    srwi 3, 3, 5\n");
+		return;
+	case ND_GT:
+		printf("    srwi 9, 3, 31\n");
+		printf("    srawi 10, 4, 31\n");
+		printf("    subfc 3, 3, 4\n");
+		printf("    adde 3, 9, 10\n");
+		printf("    xori 3, 3, 0x1\n");
+		return;
+	case ND_GE:
+		printf("    srwi 10, 4, 31\n");
+		printf("    srawi 9, 3, 31\n");
+		printf("    subfc 4, 4, 3\n");
+		printf("    adde 3, 10, 9\n");
+		return;
+	case ND_LT:
+		printf("    srwi 9, 4, 31\n");
+		printf("    srawi 10, 3, 31\n");
+		printf("    subfc 4, 4, 3\n");
+		printf("    adde 3, 9, 10\n");
+		printf("    xori 3, 3, 0x1\n");
+		return;
+	case ND_LE:
+		printf("    srwi 10, 3, 31\n");
+		printf("    srawi 9, 4, 31\n");
+		printf("    subfc 4, 3, 4\n");
+		printf("    adde 3, 10, 9\n");
 		return;
 	}
 

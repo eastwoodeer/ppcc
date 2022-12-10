@@ -35,4 +35,31 @@ assert '(3+5)/2' 4
 assert '5*(9-6)' 15
 assert '- - + 5' 5
 assert '-5 * -5' 25
+assert '5 != 5' 0
+assert '4 != 42' 1
+assert '5 == 5' 1
+assert '4 == 5' 0
+assert '99 > 4' 1
+assert '4 > 1000' 0
+assert '4 < 23' 1
+assert '99 < 28' 0
+assert '3 >= 3' 1
+assert '99 >= 98' 1
+assert '3 >= 23' 0
+
+assert '0<1' 1
+assert '1<1' 0
+assert '2<1' 0
+assert '0<=1' 1
+assert '1<=1' 1
+assert '2<=1' 0
+
+assert '1>0' 1
+assert '1>1' 0
+assert '1>2' 0
+assert '1>=0' 1
+assert '1>=1' 1
+assert '1>=2' 0
+
+echo OK
 
