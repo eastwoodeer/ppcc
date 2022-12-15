@@ -88,14 +88,24 @@ static void gen_expr(Node *n)
 	panic("invalid expression.");
 }
 
+static void gen_stmt(Node *n)
+{
+	if (n->kind == ND_EXPR_STMT) {
+		gen_expr(n->lhs);
+		return;
+	}
+	panic("invalid statement");
+}
+
 void codegen(Node *n)
 {
 	printf(".global main\n");
 	printf("main:\n");
 
-	gen_expr(n);
+	for (Node *node = n; node != NULL; node = node->next) {
+		gen_stmt(node);
+		assert(stack_depth == 0);
+	}
 
 	printf("    blr\n");
-
-	assert(stack_depth == 0);
 }

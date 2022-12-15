@@ -33,6 +33,8 @@ static Node *new_unary(NodeKind kind, Node *lhs)
 }
 
 /**
+ * stmt = expr-stmt
+ * expr-stmt = expr ";"
  * expr = equality
  * equality = relational ( "==" relational | "!=" relational )*
  * relational = add ( "<" add | "<=" add | ">" add | ">=" add )*
@@ -42,12 +44,25 @@ static Node *new_unary(NodeKind kind, Node *lhs)
  * primary = "(" expr ")" | num
  **/
 static Node *expr(Token *tk, Token **rest);
+static Node *expr_stmt(Token *tk, Token **rest);
 static Node *equality(Token *tk, Token **rest);
 static Node *relational(Token *tk, Token **rest);
 static Node *add(Token *tk, Token **rest);
 static Node *mul(Token *tk, Token **rest);
 static Node *unary(Token *tk, Token **rest);
 static Node *primary(Token *tk, Token **rest);
+
+static Node *stmt(Token *tk, Token **rest)
+{
+	return expr_stmt(tk, rest);
+}
+
+static Node *expr_stmt(Token *tk, Token **rest)
+{
+	Node *n = new_unary(ND_EXPR_STMT, expr(tk, &tk));
+	*rest = skip(tk, ";");
+	return n;
+}
 
 static Node *expr(Token *tk, Token **rest)
 {
@@ -175,9 +190,10 @@ static Node *primary(Token *tk, Token **rest)
 
 Node *parse(Token *tk)
 {
-	Node *n = expr(tk, &tk);
-	if (tk->kind != TK_EOF) {
-		panic_tk(tk, "extra token");
+	Node head = {};
+	Node *current = &head;
+	while (tk->kind != TK_EOF) {
+		current = current->next = stmt(tk, &tk);
 	}
-	return n;
+	return head.next;
 }
