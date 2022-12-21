@@ -12,6 +12,7 @@
 typedef enum {
 	TK_IDENT,
 	TK_PUNCT, /* punctuations */
+	TK_KEYWORD, /* keywords */
 	TK_NUM, /* numbers */
 	TK_EOF,
 } TokenKind;
@@ -65,7 +66,8 @@ typedef enum {
 	ND_LE, /* <= */
 	ND_GT, /* > */
 	ND_GE, /* >= */
-	ND_ASSIGN,
+	ND_ASSIGN, /* = */
+	ND_RETURN, /* return */
 	ND_EXPR_STMT,
 	ND_VAR, /* variable */
 	ND_NUM, /* Integer */

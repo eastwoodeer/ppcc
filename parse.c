@@ -63,7 +63,7 @@ static Obj *new_lval(char *name)
 }
 
 /**
- * stmt = expr-stmt
+ * stmt = "return" stmt ";" | expr-stmt
  * expr-stmt = expr ";"
  * expr = assign
  * assign = equality ( "=" assign )?
@@ -86,6 +86,11 @@ static Node *primary(Token *tk, Token **rest);
 
 static Node *stmt(Token *tk, Token **rest)
 {
+	if (equal(tk, "return")) {
+		Node *n = new_unary(ND_RETURN, expr(tk->next, &tk));
+		*rest = skip(tk, ";");
+		return n;
+	}
 	return expr_stmt(tk, rest);
 }
 

@@ -115,6 +115,7 @@ Token *tokenize(char *s)
 			continue;
 		}
 
+		/* Identifier or keywords */
 		if (is_ident1(*p)) {
 			char *start = p;
 			do {
@@ -136,6 +137,12 @@ Token *tokenize(char *s)
 	}
 
 	cur = cur->next = new_token(p, p, TK_EOF);
+
+	for (Token *tk = head.next; tk->kind != TK_EOF; tk = tk->next) {
+		if (equal(tk, "return")) {
+			tk->kind = TK_KEYWORD;
+		}
+	}
 
 	return head.next;
 }

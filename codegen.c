@@ -116,10 +116,15 @@ static void gen_expr(Node *n)
 
 static void gen_stmt(Node *n)
 {
-	if (n->kind == ND_EXPR_STMT) {
+	switch (n->kind) {
+	case ND_RETURN:
+		gen_expr(n->lhs);
+		printf("    b .L.return\n");
+	case ND_EXPR_STMT:
 		gen_expr(n->lhs);
 		return;
 	}
+
 	panic("invalid statement");
 }
 
@@ -150,6 +155,7 @@ void codegen(Function *prog)
 		assert(stack_depth == 0);
 	}
 
+	printf(".L.return:\n");
 	printf("    lwz 31, %d(1)\n", prog->stack_size + 4);
 	printf("    addi 1, 1, %d\n", prog->stack_size + 8);
 
