@@ -66,7 +66,7 @@ static Obj *new_lval(char *name)
  * stmt = "return" stmt ";" 
  *        | "{" compound-stmt
  *        | expr-stmt
- * expr-stmt = expr ";"
+ * expr-stmt = expr? ";"
  * compound-stmt = stmt* "}"
  * expr = assign
  * assign = equality ( "=" assign )?
@@ -105,6 +105,11 @@ static Node *stmt(Token *tk, Token **rest)
 
 static Node *expr_stmt(Token *tk, Token **rest)
 {
+	if (equal(tk, ";")) {
+		*rest = tk->next;
+		return new_node(ND_BLOCK);
+	}
+
 	Node *n = new_unary(ND_EXPR_STMT, expr(tk, &tk));
 	*rest = skip(tk, ";");
 	return n;

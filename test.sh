@@ -76,5 +76,6 @@ assert '{ 1; return 2; 3; }' 2
 assert '{ 1; 2; return 3; }' 3
 
 assert '{ {1; {2;} return 3; } }' 3
+assert '{ ;;; return 3; }' 3
 
 echo OK
