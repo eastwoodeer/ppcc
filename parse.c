@@ -63,7 +63,8 @@ static Obj *new_lval(char *name)
 }
 
 /**
- * stmt = "return" stmt ";" 
+ * stmt = "return" stmt ";"
+ *        | "if" "(" expr ")" stmt ("else" stmt)?
  *        | "{" compound-stmt
  *        | expr-stmt
  * expr-stmt = expr? ";"
@@ -93,6 +94,19 @@ static Node *stmt(Token *tk, Token **rest)
 	if (equal(tk, "return")) {
 		Node *n = new_unary(ND_RETURN, expr(tk->next, &tk));
 		*rest = skip(tk, ";");
+		return n;
+	}
+
+	if (equal(tk, "if")) {
+		Node *n = new_node(ND_IF);
+		tk = skip(tk->next, "(");
+		n->cond = expr(tk, &tk);
+		tk = skip(tk, ")");
+		n->then = stmt(tk, &tk);
+		if (equal(tk, "else")) {
+			n->els = stmt(tk->next, &tk);
+		}
+		*rest = tk;
 		return n;
 	}
 

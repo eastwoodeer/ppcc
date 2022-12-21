@@ -17,6 +17,12 @@ static void pop(char *arg)
 	stack_depth--;
 }
 
+static int count()
+{
+	static int i = 1;
+	return i++;
+}
+
 static int align_to(int n, int align)
 {
 	return (n + align - 1) & (~(align - 1));
@@ -117,6 +123,21 @@ static void gen_expr(Node *n)
 static void gen_stmt(Node *n)
 {
 	switch (n->kind) {
+	case ND_IF: {
+		int c = count();
+		gen_expr(n->cond);
+		printf("    cmpwi 3, 0\n");
+		printf("    beq .L.else.%d\n", c);
+		gen_stmt(n->then);
+		printf("    b .L.end.%d\n", c);
+		printf(".L.else.%d:\n", c);
+		if (n->els) {
+			gen_stmt(n->els);
+		}
+		printf(".L.end.%d:\n", c);
+
+		return;
+	}
 	case ND_BLOCK:
 		for (Node *node = n->body; node; node = node->next) {
 			gen_stmt(node);

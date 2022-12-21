@@ -78,4 +78,12 @@ assert '{ 1; 2; return 3; }' 3
 assert '{ {1; {2;} return 3; } }' 3
 assert '{ ;;; return 3; }' 3
 
+assert '{ if (0) return 2; return 3; }' 3
+assert '{ if (1-1) return 2; return 3; }' 3
+assert '{ if (1) return 2; return 3; }' 2
+assert '{ if (2-1) return 2; return 3; }' 2
+assert '{ if (0) { 1; 2; return 3; } else { return 4; } }' 4
+assert '{ if (1) { 1; 2; return 3; } else { return 4; } }' 3
+
+
 echo OK

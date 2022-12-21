@@ -1,4 +1,5 @@
 #include "ppcc.h"
+#include <stdbool.h>
 
 static char *current_line;
 
@@ -94,6 +95,17 @@ static int read_punct(char *s)
 	return ispunct(*s) ? 1 : 0;
 }
 
+static bool is_keyword(Token *tk)
+{
+	static char *kw[] = { "return", "if", "else" };
+	for (int i = 0; i < sizeof(kw) / sizeof(*kw); i++) {
+		if (equal(tk, kw[i])) {
+			return true;
+		}
+	}
+	return false;
+}
+
 Token *tokenize(char *s)
 {
 	current_line = s;
@@ -139,7 +151,7 @@ Token *tokenize(char *s)
 	cur = cur->next = new_token(p, p, TK_EOF);
 
 	for (Token *tk = head.next; tk->kind != TK_EOF; tk = tk->next) {
-		if (equal(tk, "return")) {
+		if (is_keyword(tk)) {
 			tk->kind = TK_KEYWORD;
 		}
 	}
