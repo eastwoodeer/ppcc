@@ -17,11 +17,15 @@ static void pop(char *arg)
 	stack_depth--;
 }
 
+static int align_to(int n, int align)
+{
+	return (n + align - 1) & (~(align - 1));
+}
+
 static void gen_addr(Node *n)
 {
 	if (n->kind == ND_VAR) {
-		int offset = (n->name - 'a' + 1) * 4;
-		printf("    addi 3, 31, %d\n", -offset);
+		printf("    addi 3, 31, %d\n", n->var->offset);
 		return;
 	}
 
@@ -119,23 +123,35 @@ static void gen_stmt(Node *n)
 	panic("invalid statement");
 }
 
-void codegen(Node *n)
+static void assign_lvar_offsets(Function *prog)
 {
+	int offset = 0;
+	for (Obj *var = prog->locals; var; var = var->next) {
+		offset += 4;
+		var->offset = -offset;
+	}
+	prog->stack_size = align_to(offset, 8);
+}
+
+void codegen(Function *prog)
+{
+	assign_lvar_offsets(prog);
+
 	printf(".global main\n");
 	printf("main:\n");
 
 	/* Prologue */
-	printf("    addi 1, 1, -224\n");
-	printf("    stw 31, 216(1)\n");
-	printf("    addi 31, 1, 208\n");
+	printf("    addi 1, 1, -%d\n", prog->stack_size + 8);
+	printf("    stw 31, %d(1)\n", prog->stack_size + 4);
+	printf("    addi 31, 1, %d\n", prog->stack_size);
 
-	for (Node *node = n; node != NULL; node = node->next) {
+	for (Node *node = prog->body; node != NULL; node = node->next) {
 		gen_stmt(node);
 		assert(stack_depth == 0);
 	}
 
-	printf("    lwz 31, 216(1)\n");
-	printf("    addi 1, 1, 224\n");
+	printf("    lwz 31, %d(1)\n", prog->stack_size + 4);
+	printf("    addi 1, 1, %d\n", prog->stack_size + 8);
 
 	printf("    blr\n");
 }

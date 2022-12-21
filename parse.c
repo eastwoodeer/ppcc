@@ -1,5 +1,18 @@
 #include "ppcc.h"
 
+Obj *locals;
+
+static Obj *find_var(Token *tk)
+{
+	for (Obj *var = locals; var; var = var->next) {
+		if (tk->len == strlen(var->name) &&
+		    !strncmp(tk->loc, var->name, tk->len)) {
+			return var;
+		}
+	}
+	return NULL;
+}
+
 static Node *new_node(NodeKind kind)
 {
 	Node *n = calloc(1, sizeof(Node));
@@ -32,11 +45,21 @@ static Node *new_unary(NodeKind kind, Node *lhs)
 	return n;
 }
 
-static Node *new_var_node(char name)
+static Node *new_var_node(Obj *var)
 {
 	Node *n = new_node(ND_VAR);
-	n->name = name;
+	n->var = var;
 	return n;
+}
+
+static Obj *new_lval(char *name)
+{
+	Obj *var = calloc(1, sizeof(Obj));
+	var->name = name;
+	var->next = locals;
+	locals = var;
+
+	return var;
 }
 
 /**
@@ -196,9 +219,12 @@ static Node *primary(Token *tk, Token **rest)
 	}
 
 	if (tk->kind == TK_IDENT) {
-		Node *n = new_var_node(*tk->loc);
+		Obj *var = find_var(tk);
+		if (!var) {
+			var = new_lval(strndup(tk->loc, tk->len));
+		}
 		*rest = tk->next;
-		return n;
+		return new_var_node(var);
 	}
 
 	if (tk->kind == TK_NUM) {
@@ -213,12 +239,17 @@ static Node *primary(Token *tk, Token **rest)
 	return NULL;
 }
 
-Node *parse(Token *tk)
+Function *parse(Token *tk)
 {
 	Node head = {};
 	Node *current = &head;
 	while (tk->kind != TK_EOF) {
 		current = current->next = stmt(tk, &tk);
 	}
-	return head.next;
+
+	Function *prog = calloc(1, sizeof(Function));
+	prog->body = head.next;
+	prog->locals = locals;
+
+	return prog;
 }

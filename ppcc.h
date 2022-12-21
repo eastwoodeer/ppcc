@@ -34,6 +34,24 @@ void panic_at(char *loc, char *fmt, ...);
 void panic_tk(Token *tk, char *fmt, ...);
 void panic(char *fmt, ...);
 
+typedef struct Node Node;
+
+/* Local variable */
+typedef struct Obj Obj;
+struct Obj {
+	Obj *next;
+	char *name;
+	int offset;
+};
+
+/* Function */
+typedef struct Function Function;
+struct Function {
+	Node *body;
+	Obj *locals;
+	int stack_size;
+};
+
 /* Parser */
 typedef enum {
 	ND_ADD, /* + */
@@ -53,18 +71,17 @@ typedef enum {
 	ND_NUM, /* Integer */
 } NodeKind;
 
-typedef struct Node Node;
 struct Node {
 	NodeKind kind;
 	Node *next;
 	Node *lhs;
 	Node *rhs;
-	char name;
-	int val;
+	Obj *var; /* if kind == ND_VAR */
+	int val; /* if kind == ND_NUM */
 };
 
-Node *parse(Token *tk);
+Function *parse(Token *tk);
 
-void codegen(Node *n);
+void codegen(Function *prog);
 
 #endif

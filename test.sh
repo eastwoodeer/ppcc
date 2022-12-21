@@ -67,5 +67,8 @@ assert 'a=3; a;' 3
 assert 'a=3; z=5; a+z;' 8
 assert 'a=b=3; a+b;' 6
 
+assert 'foo= 3; foo;' 3
+assert 'foo123=3; bar=5; foo123+bar;' 8
+
 echo OK
 
