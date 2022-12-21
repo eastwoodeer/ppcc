@@ -63,5 +63,9 @@ assert '1>=2;' 0
 
 assert '1; 2; 3; 4;' 4
 
+assert 'a=3; a;' 3
+assert 'a=3; z=5; a+z;' 8
+assert 'a=b=3; a+b;' 6
+
 echo OK
 

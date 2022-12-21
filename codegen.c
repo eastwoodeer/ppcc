@@ -17,6 +17,17 @@ static void pop(char *arg)
 	stack_depth--;
 }
 
+static void gen_addr(Node *n)
+{
+	if (n->kind == ND_VAR) {
+		int offset = (n->name - 'a' + 1) * 4;
+		printf("    addi 3, 31, %d\n", -offset);
+		return;
+	}
+
+	panic("not a lvalue");
+}
+
 static void gen_expr(Node *n)
 {
 	switch (n->kind) {
@@ -26,6 +37,17 @@ static void gen_expr(Node *n)
 	case ND_NEG:
 		gen_expr(n->lhs);
 		printf("    neg 3, 3\n");
+		return;
+	case ND_VAR:
+		gen_addr(n);
+		printf("    lwz 3, 0(3)\n");
+		return;
+	case ND_ASSIGN:
+		gen_addr(n->lhs);
+		push();
+		gen_expr(n->rhs);
+		pop("4");
+		printf("    stw 3, 0(4)\n");
 		return;
 	}
 
@@ -102,10 +124,18 @@ void codegen(Node *n)
 	printf(".global main\n");
 	printf("main:\n");
 
+	/* Prologue */
+	printf("    addi 1, 1, -224\n");
+	printf("    stw 31, 216(1)\n");
+	printf("    addi 31, 1, 208\n");
+
 	for (Node *node = n; node != NULL; node = node->next) {
 		gen_stmt(node);
 		assert(stack_depth == 0);
 	}
+
+	printf("    lwz 31, 216(1)\n");
+	printf("    addi 1, 1, 224\n");
 
 	printf("    blr\n");
 }

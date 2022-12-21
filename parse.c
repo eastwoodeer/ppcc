@@ -32,19 +32,28 @@ static Node *new_unary(NodeKind kind, Node *lhs)
 	return n;
 }
 
+static Node *new_var_node(char name)
+{
+	Node *n = new_node(ND_VAR);
+	n->name = name;
+	return n;
+}
+
 /**
  * stmt = expr-stmt
  * expr-stmt = expr ";"
- * expr = equality
+ * expr = assign
+ * assign = equality ( "=" assign )?
  * equality = relational ( "==" relational | "!=" relational )*
  * relational = add ( "<" add | "<=" add | ">" add | ">=" add )*
  * add = mul ( "+" mul | "-" mul )* 
  * unary = ( "+" | "-" ) unary | primary 
  * mul = unary ( "*" unary | "/" unary )*  
- * primary = "(" expr ")" | num
+ * primary = "(" expr ")" | ident | num
  **/
 static Node *expr(Token *tk, Token **rest);
 static Node *expr_stmt(Token *tk, Token **rest);
+static Node *assign(Token *tk, Token **rest);
 static Node *equality(Token *tk, Token **rest);
 static Node *relational(Token *tk, Token **rest);
 static Node *add(Token *tk, Token **rest);
@@ -66,7 +75,17 @@ static Node *expr_stmt(Token *tk, Token **rest)
 
 static Node *expr(Token *tk, Token **rest)
 {
-	return equality(tk, rest);
+	return assign(tk, rest);
+}
+
+static Node *assign(Token *tk, Token **rest)
+{
+	Node *n = equality(tk, &tk);
+	if (equal(tk, "=")) {
+		n = new_binary(ND_ASSIGN, n, assign(tk->next, &tk));
+	}
+	*rest = tk;
+	return n;
 }
 
 static Node *equality(Token *tk, Token **rest)
@@ -173,6 +192,12 @@ static Node *primary(Token *tk, Token **rest)
 	if (equal(tk, "(")) {
 		Node *n = expr(tk->next, &tk);
 		*rest = skip(tk, ")");
+		return n;
+	}
+
+	if (tk->kind == TK_IDENT) {
+		Node *n = new_var_node(*tk->loc);
+		*rest = tk->next;
 		return n;
 	}
 

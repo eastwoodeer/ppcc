@@ -104,6 +104,12 @@ Token *tokenize(char *s)
 			continue;
 		}
 
+		if ('a' <= *p && *p <= 'z') {
+			cur = cur->next = new_token(p, p + 1, TK_IDENT);
+			p++;
+			continue;
+		}
+
 		/* Punctuators */
 		int len = read_punct(p);
 		if (len) {

@@ -10,6 +10,7 @@
 #include <string.h>
 
 typedef enum {
+	TK_IDENT,
 	TK_PUNCT, /* punctuations */
 	TK_NUM, /* numbers */
 	TK_EOF,
@@ -46,7 +47,9 @@ typedef enum {
 	ND_LE, /* <= */
 	ND_GT, /* > */
 	ND_GE, /* >= */
+	ND_ASSIGN,
 	ND_EXPR_STMT,
+	ND_VAR, /* variable */
 	ND_NUM, /* Integer */
 } NodeKind;
 
@@ -56,6 +59,7 @@ struct Node {
 	Node *next;
 	Node *lhs;
 	Node *rhs;
+	char name;
 	int val;
 };
 
