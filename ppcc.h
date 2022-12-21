@@ -1,6 +1,8 @@
 #ifndef __PPCC_H__
 #define __PPCC_H__
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
@@ -68,6 +70,7 @@ typedef enum {
 	ND_GE, /* >= */
 	ND_ASSIGN, /* = */
 	ND_RETURN, /* return */
+	ND_BLOCK, /* {...} */
 	ND_EXPR_STMT,
 	ND_VAR, /* variable */
 	ND_NUM, /* Integer */
@@ -78,6 +81,7 @@ struct Node {
 	Node *next;
 	Node *lhs;
 	Node *rhs;
+	Node *body; /* Block */
 	Obj *var; /* if kind == ND_VAR */
 	int val; /* if kind == ND_NUM */
 };
