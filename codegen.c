@@ -35,7 +35,7 @@ static void gen_addr(Node *n)
 		return;
 	}
 
-	panic("not a lvalue");
+	panic_tk(n->tk, "not a lvalue");
 }
 
 static void gen_expr(Node *n)
@@ -117,7 +117,7 @@ static void gen_expr(Node *n)
 		return;
 	}
 
-	panic("invalid expression.");
+	panic_tk(n->tk, "invalid expression.");
 }
 
 static void gen_stmt(Node *n)
@@ -170,7 +170,7 @@ static void gen_stmt(Node *n)
 		return;
 	}
 
-	panic("invalid statement");
+	panic_tk(n->tk, "invalid statement");
 }
 
 static void assign_lvar_offsets(Function *prog)
