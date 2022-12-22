@@ -97,7 +97,7 @@ static int read_punct(char *s)
 
 static bool is_keyword(Token *tk)
 {
-	static char *kw[] = { "return", "if", "else", "for" };
+	static char *kw[] = { "return", "if", "else", "for", "while" };
 	for (int i = 0; i < sizeof(kw) / sizeof(*kw); i++) {
 		if (equal(tk, kw[i])) {
 			return true;
