@@ -138,6 +138,23 @@ static void gen_stmt(Node *n)
 
 		return;
 	}
+	case ND_FOR: {
+		int c = count();
+		gen_stmt(n->init);
+		printf(".L.begin.%d:\n", c);
+		if (n->cond) {
+			gen_expr(n->cond);
+			printf("    cmpwi 3, 0\n");
+			printf("    beq .L.end.%d\n", c);
+		}
+		gen_stmt(n->then);
+		if (n->inc) {
+			gen_expr(n->inc);
+		}
+		printf("    b .L.begin.%d\n", c);
+		printf(".L.end.%d:\n", c);
+		return;
+	}
 	case ND_BLOCK:
 		for (Node *node = n->body; node; node = node->next) {
 			gen_stmt(node);

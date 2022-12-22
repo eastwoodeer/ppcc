@@ -6,4 +6,6 @@
 /tmp*
 /ppcc
 /.tags
+/tags
 /.vscode
+/.ccls-cache
