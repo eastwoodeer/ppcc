@@ -3,6 +3,8 @@
 /* Code generator */
 static int stack_depth = 0;
 
+static void gen_expr(Node *n);
+
 static void push()
 {
 	printf("    addi 1, 1, -4\n");
@@ -30,8 +32,12 @@ static int align_to(int n, int align)
 
 static void gen_addr(Node *n)
 {
-	if (n->kind == ND_VAR) {
+	switch (n->kind) {
+	case ND_VAR:
 		printf("    addi 3, 31, %d\n", n->var->offset);
+		return;
+	case ND_DEREF:
+		gen_expr(n->lhs);
 		return;
 	}
 
@@ -51,6 +57,13 @@ static void gen_expr(Node *n)
 	case ND_VAR:
 		gen_addr(n);
 		printf("    lwz 3, 0(3)\n");
+		return;
+	case ND_DEREF:
+		gen_expr(n->lhs);
+		printf("    lwz 3, 0(3)\n");
+		return;
+	case ND_ADDR:
+		gen_addr(n->lhs);
 		return;
 	case ND_ASSIGN:
 		gen_addr(n->lhs);

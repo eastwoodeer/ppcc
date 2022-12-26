@@ -89,4 +89,12 @@ assert '{ i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j; }' 55
 assert '{ for (;;) {return 3;} return 5; }' 3
 assert '{ i=0; while(i<10) { i=i+1; } return i; }' 10
 
+assert '{ x=3; return *&x; }' 3
+assert '{ x=3; y=&x; z=&y; return **z; }' 3
+assert '{ x=3; y=5; return *(&x+4); }' 5
+assert '{ x=3; y=5; return *(&y-4); }' 3
+assert '{ x=3; y=&x; *y=5; return x; }' 5
+assert '{ x=3; y=5; *(&x+4)=7; return y; }' 7
+assert '{ x=3; y=5; *(&y-4)=7; return x; }' 7
+
 echo OK

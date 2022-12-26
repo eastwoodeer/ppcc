@@ -69,6 +69,8 @@ typedef enum {
 	ND_GT, /* > */
 	ND_GE, /* >= */
 	ND_ASSIGN, /* = */
+	ND_ADDR, /* & */
+	ND_DEREF, /* * */
 	ND_RETURN, /* "return" */
 	ND_IF, /* "if" */
 	ND_FOR, /* "for"/"while" */

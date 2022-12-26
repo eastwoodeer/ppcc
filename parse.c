@@ -77,7 +77,7 @@ static Obj *new_lval(char *name)
  * equality = relational ( "==" relational | "!=" relational )*
  * relational = add ( "<" add | "<=" add | ">" add | ">=" add )*
  * add = mul ( "+" mul | "-" mul )* 
- * unary = ( "+" | "-" ) unary | primary 
+ * unary = ( "+" | "-" | "&" | "*" ) unary | primary 
  * mul = unary ( "*" unary | "/" unary )*  
  * primary = "(" expr ")" | ident | num
  **/
@@ -295,6 +295,14 @@ static Node *unary(Token *tk, Token **rest)
 
 	if (equal(tk, "-")) {
 		return new_unary(ND_NEG, unary(tk->next, rest), tk);
+	}
+
+	if (equal(tk, "&")) {
+		return new_unary(ND_ADDR, unary(tk->next, rest), tk);
+	}
+
+	if (equal(tk, "*")) {
+		return new_unary(ND_DEREF, unary(tk->next, rest), tk);
 	}
 
 	return primary(tk, rest);
