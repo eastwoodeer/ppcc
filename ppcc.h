@@ -20,6 +20,8 @@ typedef enum {
 } TokenKind;
 
 typedef struct Token Token;
+typedef struct Type Type;
+
 struct Token {
 	TokenKind kind;
 	Token *next;
@@ -83,6 +85,7 @@ typedef enum {
 struct Node {
 	NodeKind kind;
 	Node *next;
+	Type *type;
 	Token *tk;
 
 	Node *lhs;
@@ -99,6 +102,21 @@ struct Node {
 	Obj *var; /* if kind == ND_VAR */
 	int val; /* if kind == ND_NUM */
 };
+
+typedef enum {
+	TP_INT,
+	TP_PTR,
+} TypeKind;
+
+struct Type {
+	TypeKind kind;
+	Type *base;
+};
+
+extern Type *type_int;
+
+bool is_integer(Type *t);
+void add_type(Node *n);
 
 Function *parse(Token *tk);
 
